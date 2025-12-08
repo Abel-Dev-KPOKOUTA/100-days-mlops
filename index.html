@@ -3,58 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Parcours MLOps - 100 Jours (avec DB)</title>
+    <title>Mon Parcours MLOps - 100 Jours</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-6">
     <div id="app" class="max-w-5xl mx-auto"></div>
 
-    <!-- Modal de configuration -->
-    <div id="configModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
-        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4">
-            <h2 class="text-2xl font-bold mb-4">🔧 Configuration Supabase</h2>
-            <p class="text-gray-600 mb-4">Entrez vos identifiants Supabase pour activer la synchronisation avec la base de données.</p>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Supabase URL</label>
-                    <input type="text" id="supabaseUrl" placeholder="https://xxxxx.supabase.co" class="w-full p-3 border border-gray-300 rounded-lg">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Supabase Anon Key</label>
-                    <input type="text" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full p-3 border border-gray-300 rounded-lg">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nom d'utilisateur (pour identifier vos entrées)</label>
-                    <input type="text" id="username" placeholder="Votre nom ou pseudo" class="w-full p-3 border border-gray-300 rounded-lg">
-                </div>
-            </div>
-
-            <div class="mt-6 flex gap-4">
-                <button onclick="saveConfig()" class="flex-1 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700">
-                    💾 Sauvegarder et connecter
-                </button>
-                <button onclick="closeConfigModal()" class="bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg hover:bg-gray-400">
-                    Annuler
-                </button>
-            </div>
-
-            <div class="mt-4 p-4 bg-blue-50 rounded-lg">
-                <p class="text-sm text-blue-800"><strong>📚 Pas encore de compte Supabase ?</strong></p>
-                <ol class="text-sm text-blue-700 mt-2 space-y-1 list-decimal list-inside">
-                    <li>Allez sur <a href="https://supabase.com" target="_blank" class="underline">supabase.com</a></li>
-                    <li>Créez un compte gratuit</li>
-                    <li>Créez un nouveau projet</li>
-                    <li>Allez dans Settings → API</li>
-                    <li>Copiez l'URL et la clé "anon public"</li>
-                </ol>
-            </div>
-        </div>
-    </div>
-
     <script>
         const { createClient } = supabase;
+        
+        // Configuration Supabase pré-remplie
+        const SUPABASE_URL = 'https://bpokzqtyacewdcjmpoun.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwb2t6cXR5YWNld2Rjam1wb3VuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNTQ4OTYsImV4cCI6MjA4MDczMDg5Nn0.h0hQwCQmXFGMnGzhD0F8IJn3G8jUujzLR43mEL4BDvA';
+        
         let supabaseClient = null;
         let currentUser = null;
 
@@ -71,7 +33,8 @@
                 resources: ''
             },
             isConnected: false,
-            isLoading: false
+            isLoading: false,
+            showUserPrompt: false
         };
 
         // Icônes SVG
@@ -82,81 +45,51 @@
             book: '<svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>',
             download: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>',
             trash: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>',
-            settings: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>',
+            user: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>',
             database: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>'
         };
 
-        // Configuration Supabase
+        // Initialisation Supabase
         function initSupabase() {
-            const url = localStorage.getItem('supabase_url');
-            const key = localStorage.getItem('supabase_key');
-            currentUser = localStorage.getItem('username');
-
-            if (url && key) {
-                try {
-                    supabaseClient = createClient(url, key);
-                    state.isConnected = true;
-                    loadFromDatabase();
-                } catch (error) {
-                    console.error('Erreur Supabase:', error);
-                    state.isConnected = false;
-                }
-            }
-        }
-
-        function showConfigModal() {
-            document.getElementById('configModal').style.display = 'flex';
-            document.getElementById('supabaseUrl').value = localStorage.getItem('supabase_url') || '';
-            document.getElementById('supabaseKey').value = localStorage.getItem('supabase_key') || '';
-            document.getElementById('username').value = localStorage.getItem('username') || '';
-        }
-
-        function closeConfigModal() {
-            document.getElementById('configModal').style.display = 'none';
-        }
-
-        async function saveConfig() {
-            const url = document.getElementById('supabaseUrl').value.trim();
-            const key = document.getElementById('supabaseKey').value.trim();
-            const username = document.getElementById('username').value.trim();
-
-            if (!url || !key || !username) {
-                alert('Veuillez remplir tous les champs');
+            currentUser = localStorage.getItem('mlops_username');
+            
+            if (!currentUser) {
+                state.showUserPrompt = true;
+                render();
                 return;
             }
 
-            localStorage.setItem('supabase_url', url);
-            localStorage.setItem('supabase_key', key);
-            localStorage.setItem('username', username);
-
-            closeConfigModal();
-            initSupabase();
-            
-            // Créer la table si elle n'existe pas
-            await createTableIfNotExists();
-            
-            alert('✅ Configuration sauvegardée ! Base de données connectée.');
-            render();
+            try {
+                supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+                state.isConnected = true;
+                loadFromDatabase();
+            } catch (error) {
+                console.error('Erreur Supabase:', error);
+                state.isConnected = false;
+                alert('❌ Erreur de connexion à Supabase. Vérifiez la console.');
+            }
         }
 
-        async function createTableIfNotExists() {
-            // Note: En production, créez la table via le dashboard Supabase
-            // Cette fonction est juste pour info
-            console.log('Table à créer dans Supabase Dashboard:');
-            console.log(`
-                CREATE TABLE mlops_entries (
-                    id BIGSERIAL PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    day INTEGER NOT NULL,
-                    date DATE NOT NULL,
-                    topic TEXT NOT NULL,
-                    learned TEXT NOT NULL,
-                    code TEXT,
-                    challenges TEXT,
-                    resources TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                );
-            `);
+        function saveUsername() {
+            const username = document.getElementById('usernameInput').value.trim();
+            if (!username) {
+                alert('⚠️ Veuillez entrer votre nom');
+                return;
+            }
+            localStorage.setItem('mlops_username', username);
+            currentUser = username;
+            state.showUserPrompt = false;
+            initSupabase();
+        }
+
+        function changeUser() {
+            if (confirm('Voulez-vous changer d\'utilisateur ? Vos données resteront sauvegardées.')) {
+                localStorage.removeItem('mlops_username');
+                state.entries = [];
+                state.currentDay = 1;
+                state.showUserPrompt = true;
+                render();
+            }
         }
 
         // Base de données
@@ -181,7 +114,7 @@
                     : 1;
             } catch (error) {
                 console.error('Erreur chargement:', error);
-                alert('❌ Erreur lors du chargement. Vérifiez que la table existe.');
+                alert('❌ Erreur: ' + error.message);
             }
 
             state.isLoading = false;
@@ -190,7 +123,12 @@
 
         async function saveEntry() {
             if (!state.todayEntry.topic || !state.todayEntry.learned) {
-                alert('Veuillez remplir au moins le sujet et ce que vous avez appris');
+                alert('⚠️ Veuillez remplir au moins le sujet et ce que vous avez appris');
+                return;
+            }
+
+            if (!currentUser) {
+                alert('⚠️ Veuillez d\'abord entrer votre nom');
                 return;
             }
 
@@ -205,70 +143,69 @@
                 resources: state.todayEntry.resources || null
             };
 
-            if (supabaseClient && state.isConnected) {
-                // Sauvegarder dans Supabase
-                try {
-                    const { data, error } = await supabaseClient
-                        .from('mlops_entries')
-                        .insert([newEntry])
-                        .select();
-
-                    if (error) throw error;
-
-                    state.entries.push({ ...newEntry, id: data[0].id });
-                } catch (error) {
-                    console.error('Erreur sauvegarde:', error);
-                    alert('❌ Erreur lors de la sauvegarde: ' + error.message);
-                    return;
-                }
-            } else {
-                // Fallback localStorage
-                newEntry.id = Date.now();
-                state.entries.push(newEntry);
-                localStorage.setItem('mlops-entries', JSON.stringify(state.entries));
-            }
-
-            state.currentDay++;
-            state.todayEntry = {
-                date: new Date().toISOString().split('T')[0],
-                topic: '',
-                learned: '',
-                code: '',
-                challenges: '',
-                resources: ''
-            };
-
+            state.isLoading = true;
             render();
-            alert('✅ Progression du jour enregistrée !');
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('mlops_entries')
+                    .insert([newEntry])
+                    .select();
+
+                if (error) throw error;
+
+                state.entries.push({ ...newEntry, id: data[0].id });
+                state.currentDay++;
+                state.todayEntry = {
+                    date: new Date().toISOString().split('T')[0],
+                    topic: '',
+                    learned: '',
+                    code: '',
+                    challenges: '',
+                    resources: ''
+                };
+
+                state.isLoading = false;
+                render();
+                alert('✅ Progression du jour enregistrée dans la base de données !');
+            } catch (error) {
+                console.error('Erreur sauvegarde:', error);
+                state.isLoading = false;
+                alert('❌ Erreur: ' + error.message);
+                render();
+            }
         }
 
         async function deleteEntry(id) {
-            if (!confirm('Supprimer cette entrée ?')) return;
+            if (!confirm('❌ Supprimer cette entrée ?')) return;
 
-            if (supabaseClient && state.isConnected) {
-                try {
-                    const { error } = await supabaseClient
-                        .from('mlops_entries')
-                        .delete()
-                        .eq('id', id);
-
-                    if (error) throw error;
-                } catch (error) {
-                    console.error('Erreur suppression:', error);
-                    alert('❌ Erreur lors de la suppression');
-                    return;
-                }
-            }
-
-            state.entries = state.entries.filter(e => e.id !== id);
-            localStorage.setItem('mlops-entries', JSON.stringify(state.entries));
+            state.isLoading = true;
             render();
+
+            try {
+                const { error } = await supabaseClient
+                    .from('mlops_entries')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                state.entries = state.entries.filter(e => e.id !== id);
+                state.isLoading = false;
+                render();
+            } catch (error) {
+                console.error('Erreur suppression:', error);
+                state.isLoading = false;
+                alert('❌ Erreur: ' + error.message);
+                render();
+            }
         }
 
         function exportToMarkdown() {
             let markdown = `# Mon Parcours MLOps - 100 Jours\n\n`;
             markdown += `👤 **Utilisateur**: ${currentUser}\n`;
-            markdown += `📊 **Progression**: ${state.entries.length}/100 jours\n\n`;
+            markdown += `📊 **Progression**: ${state.entries.length}/100 jours\n`;
+            markdown += `📅 **Date d'export**: ${new Date().toLocaleDateString('fr-FR')}\n\n`;
             markdown += `---\n\n`;
 
             state.entries.forEach(entry => {
@@ -292,12 +229,50 @@
         // Rendu
         function render() {
             const progressPercentage = (state.entries.length / 100) * 100;
-            const connectionBadge = state.isConnected 
-                ? '<span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">' + icons.database + ' DB Connectée</span>'
-                : '<span class="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-xs font-semibold px-2 py-1 rounded">⚠️ Mode Local</span>';
             
+            // Prompt utilisateur si pas de nom
+            if (state.showUserPrompt) {
+                document.getElementById('app').innerHTML = `
+                    <div class="max-w-md mx-auto mt-20">
+                        <div class="bg-white rounded-lg shadow-xl p-8">
+                            <div class="text-center mb-6">
+                                ${icons.trophy}
+                                <h1 class="text-2xl font-bold text-gray-800 mt-4">Bienvenue dans votre parcours MLOps !</h1>
+                                <p class="text-gray-600 mt-2">Pour commencer, entrez votre nom ou pseudo</p>
+                            </div>
+                            <div class="space-y-4">
+                                <input 
+                                    type="text" 
+                                    id="usernameInput" 
+                                    placeholder="Votre nom ou pseudo" 
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                    onkeypress="if(event.key === 'Enter') saveUsername()"
+                                >
+                                <button 
+                                    onclick="saveUsername()" 
+                                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all"
+                                >
+                                    🚀 Commencer mon parcours
+                                </button>
+                            </div>
+                            <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                                <p class="text-sm text-blue-800">
+                                    <strong>✨ Fonctionnalités:</strong><br>
+                                    • Suivi quotidien sur 100 jours<br>
+                                    • Sauvegarde automatique dans Supabase<br>
+                                    • Export en Markdown<br>
+                                    • Accès depuis n'importe où
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                setTimeout(() => document.getElementById('usernameInput')?.focus(), 100);
+                return;
+            }
+
             document.getElementById('app').innerHTML = `
-                ${state.isLoading ? '<div class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40"><div class="bg-white p-6 rounded-lg">⏳ Chargement...</div></div>' : ''}
+                ${state.isLoading ? '<div class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"><div class="bg-white p-6 rounded-lg shadow-xl"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div><p class="text-gray-700 font-semibold">Chargement...</p></div></div>' : ''}
 
                 <!-- Header -->
                 <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -307,16 +282,19 @@
                             <div>
                                 <h1 class="text-3xl font-bold text-gray-800">Mon Parcours MLOps</h1>
                                 <p class="text-gray-600">100 jours pour maîtriser le MLOps</p>
-                                ${currentUser ? `<p class="text-sm text-gray-500 mt-1">👤 ${currentUser}</p>` : ''}
                             </div>
                         </div>
                         <div class="text-right">
                             <div class="text-4xl font-bold text-indigo-600">Jour ${state.currentDay}</div>
                             <div class="text-sm text-gray-500 mb-2">${state.entries.length}/100 complétés</div>
-                            ${connectionBadge}
-                            <button onclick="showConfigModal()" class="mt-2 inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-sm">
-                                ${icons.settings} Configurer
-                            </button>
+                            <div class="flex items-center justify-end gap-2">
+                                <span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">
+                                    ${icons.database} DB Connectée
+                                </span>
+                                <button onclick="changeUser()" class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-semibold px-2 py-1 rounded hover:bg-indigo-50">
+                                    ${icons.user} ${currentUser}
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -387,7 +365,7 @@
                     </h2>
 
                     ${state.entries.length === 0 ? 
-                        '<p class="text-gray-500 text-center py-8">Aucune entrée pour le moment. Commencez votre parcours ! 🚀</p>' :
+                        '<div class="text-center py-12"><p class="text-gray-500 text-lg mb-2">Aucune entrée pour le moment</p><p class="text-gray-400">Commencez votre parcours dès aujourd\'hui ! 🚀</p></div>' :
                         `<div class="space-y-4 max-h-96 overflow-y-auto">
                             ${state.entries.slice().reverse().map(entry => `
                                 <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all">
@@ -396,12 +374,12 @@
                                             <span class="inline-block bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-full text-sm">Jour ${entry.day}</span>
                                             <span class="ml-2 text-gray-500 text-sm">${entry.date}</span>
                                         </div>
-                                        <button onclick="deleteEntry(${entry.id})" class="text-red-500 hover:text-red-700">
+                                        <button onclick="deleteEntry(${entry.id})" class="text-red-500 hover:text-red-700 p-1">
                                             ${icons.trash}
                                         </button>
                                     </div>
                                     <h3 class="font-bold text-gray-800 mb-2">${entry.topic}</h3>
-                                    <p class="text-gray-600 text-sm">${entry.learned.substring(0, 150)}...</p>
+                                    <p class="text-gray-600 text-sm">${entry.learned.substring(0, 150)}${entry.learned.length > 150 ? '...' : ''}</p>
                                 </div>
                             `).join('')}
                         </div>`
@@ -410,29 +388,21 @@
             `;
 
             // Attacher les événements
-            ['date', 'topic', 'learned', 'code', 'challenges', 'resources'].forEach(field => {
-                const element = document.getElementById(field);
-                if (element) {
-                    element.addEventListener('input', (e) => {
-                        state.todayEntry[field] = e.target.value;
-                    });
-                }
-            });
+            if (!state.showUserPrompt) {
+                ['date', 'topic', 'learned', 'code', 'challenges', 'resources'].forEach(field => {
+                    const element = document.getElementById(field);
+                    if (element) {
+                        element.addEventListener('input', (e) => {
+                            state.todayEntry[field] = e.target.value;
+                        });
+                    }
+                });
+            }
         }
 
         // Initialisation
         initSupabase();
-        if (!state.isConnected) {
-            // Charger depuis localStorage si pas de DB
-            const saved = localStorage.getItem('mlops-entries');
-            if (saved) state.entries = JSON.parse(saved);
-        }
         render();
-
-        // Afficher config au premier démarrage
-        if (!localStorage.getItem('supabase_url')) {
-            setTimeout(() => showConfigModal(), 1000);
-        }
     </script>
 </body>
 </html>
